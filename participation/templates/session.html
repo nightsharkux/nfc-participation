@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf %}
+{% block title %}{{ lecture.name }}{% endblock %}
+{% block content %}
+<div id="session-root" data-lecture="{{ lecture.id }}">
+  <div class="page-head">
+    <div>
+      <p><a href="{{ url_for('staff.sessions') }}">← Sessions</a> · <a href="{{ url_for('staff.subject_detail', subject_id=lecture.subject_id) }}">{{ lecture.subject_name }}</a></p>
+      <h1>{{ lecture.name }} <span id="open-badge" class="badge off">…</span></h1>
+      <p>{{ lecture.lecture_date|date }}{% if lecture.start_time %} · {{ lecture.start_time }}{% endif %}{% if lecture.track_exit %} · entry &amp; exit taps{% else %} · entry taps only{% endif %}{% if lecture.min_minutes %} · min. stay {{ lecture.min_minutes }} min{% endif %}</p>
+    </div>
+    <div class="actions">
+      {% if active %}
+        <form method="post" action="{{ url_for('live.session_end', lecture_id=lecture.id) }}">{{ csrf() }}<button class="btn danger" type="submit">End session</button></form>
+      {% else %}
+        <form method="post" action="{{ url_for('live.session_start', lecture_id=lecture.id) }}">{{ csrf() }}<button class="btn" type="submit">Start session</button></form>
+      {% endif %}
+      <a class="btn secondary" href="{{ url_for('staff.export_lecture', lecture_id=lecture.id) }}">Export CSV</a>
+      <button class="btn secondary" type="button" id="mute-btn" aria-pressed="true">🔊 Sound on</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="stat-line">
+      <div class="kpi"><span class="label">Present</span><span class="value num"><span id="c-present">0</span> <span class="muted" style="font-size:1.1rem">/ <span id="c-enrolled">0</span></span></span><span class="sub"><span id="c-left">0</span> already left</span></div>
+      <div style="flex:1 1 240px"><div class="stat-line small"><span class="muted">Participation today</span><strong class="num" id="c-pct">0%</strong></div><div class="meter big" role="img" aria-label="Share of enrolled students present" id="c-meter"><i></i></div></div>
+    </div>
+  </div>
+
+  <div class="grid split">
+    <section class="card" aria-labelledby="roster-h">
+      <div class="card-head"><h2 id="roster-h">Roster</h2>
+        <div class="chips" role="group" aria-label="Filter roster">
+          <button class="chip" type="button" data-filter-chip="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter-chip="present" aria-pressed="false">Present</button>
+          <button class="chip" type="button" data-filter-chip="absent" aria-pressed="false">Absent</button>
+        </div></div>
+      <label for="roster-search" class="sr-only">Search students</label>
+      <input id="roster-search" type="search" placeholder="Search name or Moodle ID…" style="margin-bottom:.6rem">
+      <ul class="roster" id="roster" aria-live="off"></ul>
+    </section>
+
+    <div>
+      <section class="card" aria-labelledby="scan-h">
+        <h2 id="scan-h">Scanning</h2>
+        <div id="banner" class="status-banner" role="status" aria-live="polite">Waiting for the first tap…</div>
+        <div id="scan-tools" style="margin-top:1rem" {% if not active %}hidden{% endif %}>
+          <p class="small muted">Taps from a USB reader (bridge) appear here automatically. You can also scan with this phone, or type a UID.</p>
+          <p><button class="btn" type="button" id="nfc-btn">Scan with this device</button></p>
+          <p class="small muted" id="nfc-note"></p>
+          <form id="manual-form" class="inline" autocomplete="off">
+            <div style="flex:1 1 160px"><label for="manual-uid" class="sr-only">Card UID</label><input id="manual-uid" type="text" placeholder="Enter card UID, e.g. 04A23BC4" autocapitalize="characters" spellcheck="false"></div>
+            <button class="btn secondary" type="submit">Submit UID</button>
+          </form>
+        </div>
+        {% if not active %}<p class="small muted" style="margin-top:1rem">Start the session to accept taps. You can still mark students manually from the roster.</p>{% endif %}
+      </section>
+
+      <section class="card" aria-labelledby="feed-h">
+        <h2 id="feed-h">Activity</h2>
+        <ul class="feed" id="feed"></ul>
+      </section>
+
+      <section class="card">
+        <details><summary>Lecture settings</summary>
+          <form method="post" action="{{ url_for('staff.lecture_edit', lecture_id=lecture.id) }}" style="margin-top:.75rem">
+            {{ csrf() }}
+            <div class="field"><label for="e-name">Name</label><input id="e-name" name="name" type="text" value="{{ lecture.name }}" required></div>
+            <div class="form-row">
+              <div class="field"><label for="e-date">Date</label><input id="e-date" name="lecture_date" type="date" value="{{ lecture.lecture_date }}" required></div>
+              <div class="field"><label for="e-time">Start time</label><input id="e-time" name="start_time" type="time" value="{{ lecture.start_time or '' }}"></div>
+              <div class="field"><label for="e-min">Min. stay (min)</label><input id="e-min" name="min_minutes" type="number" min="0" max="600" value="{{ lecture.min_minutes }}"></div>
+            </div>
+            <label class="check" style="margin-bottom:1rem"><input type="checkbox" name="track_exit" value="1" {{ 'checked' if lecture.track_exit }}> Record exit taps</label>
+            <button class="btn secondary" type="submit">Save</button>
+          </form>
+          <form method="post" action="{{ url_for('staff.lecture_delete', lecture_id=lecture.id) }}" data-confirm="Delete this lecture and its attendance?" style="margin-top:.75rem">{{ csrf() }}<button class="btn danger small" type="submit">Delete lecture</button></form>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <script type="application/json" id="initial-state">{{ state|tojson }}</script>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('session.js') }}" defer></script>{% endblock %}

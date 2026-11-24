@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf %}
+{% block title %}Account{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Account</h1><p>{{ g.user.name }} · {{ g.user.username }} · {{ g.user.role }}</p></div>
+  <a class="btn secondary" href="{{ url_for('auth.account_password') }}">Change password</a></div>
+
+<div class="card" id="tokens">
+  <div class="card-head"><h2>Reader bridge</h2></div>
+  <p>Using a USB NFC reader (e.g. ACR122U)? A small script on the laptop that has the reader attached sends each tap to this web app. Taps go into <strong>your currently open session</strong> — no lecture ID needed. Create a token for it:</p>
+
+  {% if new_token %}
+    <div class="flash info" role="alert">Copy this token now — it is shown only once.</div>
+    <div class="tokenbox mono" id="new-token">{{ new_token }}</div>
+    <p style="margin-top:.5rem"><button class="btn secondary small" type="button" data-copy="#new-token">Copy token</button></p>
+    <p class="small muted">Then on the laptop:</p>
+    <pre class="tokenbox mono" id="bridge-cmd">pip install pyscard requests
+python nfc_bridge.py --server {{ request.host_url.rstrip('/') }} --token {{ new_token }}</pre>
+    <p><button class="btn secondary small" type="button" data-copy="#bridge-cmd">Copy command</button></p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('auth.create_token') }}" class="inline" style="margin:1rem 0">
+    {{ csrf() }}
+    <div style="flex:1 1 240px"><label for="label">Label</label><input id="label" name="label" type="text" placeholder="e.g. Room B 204 laptop" maxlength="60"></div>
+    <button class="btn" type="submit" style="align-self:flex-end">Create token</button>
+  </form>
+
+  {% if tokens %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Label</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+    <tbody>
+    {% for t in tokens %}
+      <tr><td>{{ t.label }}</td><td>{{ t.created_at|datetime }}</td><td>{{ t.last_used_at|datetime if t.last_used_at else 'never' }}</td>
+        <td class="right"><form method="post" action="{{ url_for('auth.delete_token', token_id=t.id) }}" data-confirm="Revoke this token? The reader using it will stop working.">{{ csrf() }}<button class="btn danger small" type="submit">Revoke</button></form></td></tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}
+    <div class="empty">No tokens yet.</div>
+  {% endif %}
+  <p class="hint">Tokens act as you. Keep them private and revoke any you no longer use.</p>
+</div>
+
+<div class="card">
+  <h2>Scanning on a phone instead</h2>
+  <p>On an NFC-capable <strong>Android phone with Chrome</strong>, open a live session and tap <em>Scan with this device</em> — no bridge or laptop needed. iPhones don't support Web NFC; use the manual UID box or the bridge.</p>
+</div>
+{% endblock %}

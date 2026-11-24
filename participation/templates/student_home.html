@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import status_badge, ring %}
+{% block title %}My participation{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Hi {{ g.student.name.split(' ')[0] }} 👋</h1><p>Your participation per subject. Only subjects you're enrolled in are counted.</p></div></div>
+
+{% if not has_card %}<div class="flash info">No NFC card is linked to your profile yet — ask your lecturer to register it.</div>{% endif %}
+
+<div class="grid cols-2">
+{% for s in stats %}
+  <section class="card" aria-labelledby="s{{ s.subject_id }}">
+    <div class="stat-line">
+      <div><h2 id="s{{ s.subject_id }}">{{ s.subject }}</h2>
+        <p class="muted small">{{ s.attended }} of {{ s.total }} lectures attended</p>
+        {{ status_badge(s.status) }}
+      </div>
+      {{ ring(s.percentage, s.status) }}
+    </div>
+    <p style="margin-top:1rem">Participation grade estimate: <strong>{{ s.grade }}</strong> <span class="hint">(estimate only — your lecturer decides the final result)</span></p>
+    <details>
+      <summary>Lecture history</summary>
+      {% if s.attended_lectures %}<h3 style="margin-top:.75rem">Attended</h3>
+      <ul class="pill-list">{% for l in s.attended_lectures %}<li>{{ l.lecture_date|date }} · {{ l.name }}</li>{% endfor %}</ul>{% endif %}
+      {% if s.missed_lectures %}<h3 style="margin-top:.75rem">Missed</h3>
+      <ul class="pill-list missed">{% for l in s.missed_lectures %}<li>{{ l.lecture_date|date }} · {{ l.name }}</li>{% endfor %}</ul>{% endif %}
+    </details>
+  </section>
+{% else %}
+  <div class="card"><div class="empty">You're not enrolled in any subject yet.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

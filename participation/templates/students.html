@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, empty %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Students</h1><p>Register students and link each to the UID of their NFC student card.</p></div></div>
+
+<div class="grid cols-2">
+  <section class="card">
+    <h2>Register a student</h2>
+    <form method="post">
+      {{ csrf() }}
+      <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" value="{{ form.name }}" required autocomplete="off"></div>
+      <div class="field"><label for="moodle_id">Moodle ID</label><input id="moodle_id" name="moodle_id" type="text" value="{{ form.moodle_id }}" placeholder="e.g. s123456" autocomplete="off"></div>
+      <div class="field"><label for="card_uid">Card UID</label>
+        <div class="inline"><input id="card_uid" name="card_uid" type="text" value="{{ form.card_uid }}" placeholder="Tap a card, or type the UID" autocapitalize="characters" autocomplete="off" spellcheck="false">
+          <button class="btn secondary" type="button" data-scan-into="#card_uid">Scan card</button></div>
+        <p class="hint" id="scan-status" role="status" aria-live="polite">Phone with Chrome: uses its NFC chip. USB reader: tap on the reader while the bridge is running. Can be added later.</p></div>
+      <button class="btn" type="submit">Save student</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Import from CSV</h2>
+    <p class="small muted">Columns: <code>name</code>, <code>moodle_id</code>, optional <code>card_uid</code>. Existing Moodle IDs are updated. Excel: “Save as CSV UTF-8”.</p>
+    <form method="post" action="{{ url_for('staff.students_import') }}" enctype="multipart/form-data">
+      {{ csrf() }}
+      <div class="field"><label for="file">CSV file</label><input id="file" name="file" type="file" accept=".csv,text/csv" required></div>
+      <div class="field"><label for="subject_id">Also enroll in (optional)</label>
+        <select id="subject_id" name="subject_id"><option value="">— don't enroll —</option>{% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+      <button class="btn" type="submit">Import</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>All students ({{ students|length }})</h2>
+    <div style="flex:0 1 320px;width:100%"><label for="sfilter" class="sr-only">Search students</label><input id="sfilter" type="search" placeholder="Search name, Moodle ID or UID…" data-filter="#stu-body" value="{{ q }}"></div></div>
+  {% if students %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Moodle ID</th><th>Card UID</th><th>Sign-in</th><th class="right">Subjects</th></tr></thead>
+    <tbody id="stu-body">{% for s in students %}
+      <tr data-search="{{ (s.name ~ ' ' ~ (s.moodle_id or '') ~ ' ' ~ (s.card_uid or ''))|lower }}">
+        <td><a href="{{ url_for('staff.student_detail', student_id=s.id) }}"><strong>{{ s.name }}</strong></a></td><td>{{ s.moodle_id or '—' }}</td>
+        <td class="mono">{{ s.card_uid or '' }}{% if not s.card_uid %}<span class="badge risk">No card</span>{% endif %}</td>
+        <td>{% if s.pin_hash %}<span class="badge good">PIN set</span>{% else %}<span class="badge off">Not activated</span>{% endif %}</td><td class="right num">{{ s.subjects }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No students yet. Register one above or import a CSV.') }}{% endif %}
+</section>
+{% endblock %}

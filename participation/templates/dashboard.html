@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, status_badge, meter, session_badge, empty %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Welcome back, {{ g.user.name.split(' ')[0] }}</h1><p>{{ today_label if today_label else 'Here is what is happening across your subjects.' }}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('staff.sessions') }}">Open a session</a>
+    <a class="btn secondary" href="{{ url_for('staff.lectures') }}">New lecture</a>
+    <a class="btn secondary" href="{{ url_for('staff.students') }}">Register student</a>
+  </div>
+</div>
+
+{% if d.live %}
+<div class="card" style="border-left:6px solid var(--good)">
+  <div class="card-head"><h2><span class="badge live">Live now</span></h2></div>
+  {% for l in d.live %}
+    <div class="stat-line" style="padding:.35rem 0"><div><strong>{{ l.name }}</strong> <span class="muted">· {{ l.subject_name }}</span></div>
+    <div class="actions"><span class="num">{{ l.present }} / {{ l.enrolled }} present</span><a class="btn small" href="{{ url_for('live.session_page', lecture_id=l.id) }}">Open</a></div></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid cols-4" style="margin-bottom:1rem">
+  <div class="card kpi"><span class="label">Students</span><span class="value num">{{ d.kpis.students }}</span><span class="sub">registered</span></div>
+  <div class="card kpi"><span class="label">Subjects</span><span class="value num">{{ d.kpis.subjects }}</span><span class="sub">you teach</span></div>
+  <div class="card kpi"><span class="label">Lectures</span><span class="value num">{{ d.kpis.lectures }}</span><span class="sub">scheduled in total</span></div>
+  <div class="card kpi"><span class="label">Check-ins today</span><span class="value num">{{ d.kpis.checkins_today }}</span><span class="sub">across today's lectures</span></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Today</h2><a class="small" href="{{ url_for('staff.sessions') }}">All sessions →</a></div>
+  {% if d.todays %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Time</th><th>Lecture</th><th>Subject</th><th>Present</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for l in d.todays %}
+      <tr><td class="num">{{ l.start_time or '—' }}</td><td>{{ l.name }}</td><td>{{ l.subject_name }}</td><td class="num">{{ l.present }} / {{ l.enrolled }}</td><td>{{ session_badge(l) }}</td>
+      <td class="right"><a class="btn small {{ '' if session_active(l) else 'secondary' }}" href="{{ url_for('live.session_page', lecture_id=l.id) }}">{{ 'Open live view' if session_active(l) else 'Open session' }}</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No lectures scheduled for today.') }}{% endif %}
+</div>
+
+<div class="grid split">
+  <section class="card" aria-labelledby="chart-h">
+    <div class="card-head"><h2 id="chart-h">Attendance by lecture</h2><span class="small muted">Share of enrolled students present · last {{ d.bars|length }} lectures</span></div>
+    {% if d.bars %}
+      <div class="bars" role="list">
+        {% for b in d.bars %}
+        <a class="bar" role="listitem" href="{{ url_for('live.session_page', lecture_id=b.id) }}" title="{{ b.label }} · {{ b.date|date }}: {{ b.present }} of {{ b.enrolled }} present ({{ b.pct }}%)" aria-label="{{ b.label }}, {{ b.date|date }}: {{ b.present }} of {{ b.enrolled }} present, {{ b.pct }} percent">
+          <b>{{ b.pct }}%</b><i style="--h: {{ [b.pct, 2]|max }}%"></i></a>
+        {% endfor %}
+      </div>
+      <div class="bar-labels" aria-hidden="true">{% for b in d.bars %}<span><em>{{ b.code }}</em>{{ b.date[5:] }}</span>{% endfor %}</div>
+      <details style="margin-top:.75rem"><summary class="small">View as table</summary>
+        <div class="table-wrap" style="margin-top:.5rem"><table><thead><tr><th>Date</th><th>Lecture</th><th>Subject</th><th>Present</th><th>%</th></tr></thead><tbody>
+        {% for b in d.bars|reverse %}<tr><td>{{ b.date|date }}</td><td>{{ b.label }}</td><td>{{ b.subject }}</td><td class="num">{{ b.present }} / {{ b.enrolled }}</td><td class="num">{{ b.pct }}%</td></tr>{% endfor %}
+        </tbody></table></div></details>
+    {% else %}{{ empty('Charts appear after your first lectures have taken place.') }}{% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="subj-h">
+    <div class="card-head"><h2 id="subj-h">Subjects</h2><a class="small" href="{{ url_for('staff.subjects') }}">Manage →</a></div>
+    {% for s in d.subjects %}
+      <div class="rowline">
+        <div><a href="{{ url_for('staff.subject_detail', subject_id=s.id) }}"><strong>{{ s.name }}</strong></a><div class="small muted">{{ s.students }} students · {{ s.lectures }} lectures</div></div>
+        <div>{% if s.avg is not none %}{{ meter(s.avg, s.status) }}{% endif %}</div>
+        <div class="right nowrap num">{% if s.avg is not none %}<strong>{{ s.avg }}%</strong>{% else %}<span class="muted">—</span>{% endif %}</div>
+      </div>
+    {% else %}{{ empty('No subjects yet. Create your first one to get started.') }}{% endfor %}
+  </section>
+</div>
+
+<div class="grid cols-2">
+  <section class="card" aria-labelledby="risk-h">
+    <div class="card-head"><h2 id="risk-h">Low participation</h2><a class="small" href="{{ url_for('staff.stats', risk=1) }}">See all →</a></div>
+    {% if d.at_risk %}
+      <div class="table-wrap"><table><thead><tr><th>Student</th><th>Subject</th><th class="right">Attended</th></tr></thead><tbody>
+      {% for s in d.at_risk %}<tr><td><a href="{{ url_for('staff.student_detail', student_id=s.student_id) }}">{{ s.name }}</a></td><td>{{ s.subject }}</td><td class="right num"><span class="badge risk"><span aria-hidden="true">▲</span> {{ s.attended }}/{{ s.total }} · {{ s.percentage }}%</span></td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}{{ empty('Nobody is below 50% — nice.') }}{% endif %}
+  </section>
+  <section class="card" aria-labelledby="act-h">
+    <div class="card-head"><h2 id="act-h">Recent check-ins</h2></div>
+    {% if d.activity %}
+      <div class="table-wrap"><table><thead><tr><th>Student</th><th>Lecture</th><th>When</th></tr></thead><tbody>
+      {% for a in d.activity %}<tr><td>{{ a.name }}</td><td>{{ a.lecture }}<div class="small muted">{{ a.subject }}</div></td><td class="nowrap small">{{ a.checked_in_at|datetime }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}{{ empty('No check-ins yet.') }}{% endif %}
+  </section>
+</div>
+
+{% if d.upcoming %}
+<section class="card"><div class="card-head"><h2>Upcoming</h2><a class="small" href="{{ url_for('staff.calendar_view') }}">Calendar →</a></div>
+  <ul class="pill-list">{% for l in d.upcoming %}<li><a href="{{ url_for('live.session_page', lecture_id=l.id) }}">{{ l.lecture_date|date }}{% if l.start_time %} {{ l.start_time }}{% endif %} · {{ l.name }} <span class="muted">({{ l.subject_name }})</span></a></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% from "partials/macros.html" import csrf %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ title|default('Dashboard') }}{% endblock %} · Participation System</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="theme-color" content="#ee7203">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="{{ asset('favicon.png') }}">
+  <script src="{{ asset('theme.js') }}"></script>
+  <link rel="stylesheet" href="{{ asset('app.css') }}">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('staff.dashboard') }}">
+      <img src="{{ asset('oth_logo.jpg') }}" alt="OTH Amberg-Weiden" width="150" height="40">
+      <span class="brand-name">Participation<span class="brand-sub">NFC attendance incentives</span></span>
+    </a>
+
+    {% set ep = request.endpoint or '' %}
+    <nav class="nav" id="nav" aria-label="Main">
+      {% if g.get('user') %}
+        <a href="{{ url_for('staff.dashboard') }}" {% if ep == 'staff.dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+        <a href="{{ url_for('staff.sessions') }}" {% if ep in ('staff.sessions', 'live.session_page') %}aria-current="page"{% endif %}>Sessions</a>
+        <a href="{{ url_for('staff.subjects') }}" {% if ep in ('staff.subjects', 'staff.subject_detail') %}aria-current="page"{% endif %}>Subjects</a>
+        <a href="{{ url_for('staff.lectures') }}" {% if ep == 'staff.lectures' %}aria-current="page"{% endif %}>Lectures</a>
+        <a href="{{ url_for('staff.students') }}" {% if ep in ('staff.students', 'staff.student_detail') %}aria-current="page"{% endif %}>Students</a>
+        <a href="{{ url_for('staff.stats') }}" {% if ep == 'staff.stats' %}aria-current="page"{% endif %}>Statistics</a>
+        <a href="{{ url_for('staff.calendar_view') }}" {% if ep == 'staff.calendar_view' %}aria-current="page"{% endif %}>Calendar</a>
+      {% elif g.get('student') %}
+        <a href="{{ url_for('auth.student_home') }}" {% if ep == 'auth.student_home' %}aria-current="page"{% endif %}>My participation</a>
+      {% endif %}
+    </nav>
+
+    <button class="icon-btn" type="button" data-theme-toggle title="Toggle theme">🌙</button>
+    {% if g.get('user') or g.get('student') %}
+      {% set who = g.user if g.get('user') else g.student %}
+      <div class="menu" data-menu>
+        <button class="icon-btn" type="button" data-menu-btn aria-haspopup="true" aria-expanded="false" aria-label="Account menu">{{ who.name[:1]|upper }}</button>
+        <div class="menu-panel" hidden>
+          <div class="menu-head"><strong>{{ who.name }}</strong><div class="small muted">{{ g.user.role|capitalize if g.get('user') else 'Student' }}</div></div>
+          {% if g.get('user') %}
+            <a href="{{ url_for('auth.account') }}">Account &amp; password</a>
+            <a href="{{ url_for('auth.account') }}#tokens">Reader bridge</a>
+            {% if g.user.role == 'admin' %}<a href="{{ url_for('staff.admin_users') }}">Users &amp; data</a>{% endif %}
+          {% else %}
+            <a href="{{ url_for('auth.student_pin') }}">Change PIN</a>
+          {% endif %}
+          <form method="post" action="{{ url_for('auth.logout') }}">{{ csrf() }}<button type="submit">Sign out</button></form>
+        </div>
+      </div>
+    {% endif %}
+    <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-controls="nav" aria-expanded="false" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<main id="main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div role="status">{% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="site">OTH Amberg-Weiden · NFC Participation System · Attendance data is personal data — export and share it responsibly.</footer>
+
+<script src="{{ asset('nfc.js') }}" defer></script>
+<script src="{{ asset('app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

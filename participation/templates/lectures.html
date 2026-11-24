@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, session_badge, empty %}
+{% block title %}Lectures{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Lectures</h1><p>Plan single lectures or a whole weekly series in one go.</p></div></div>
+
+<div class="card">
+  <h2>New lecture</h2>
+  {% if not subjects %}
+    <div class="empty">You need a subject first. <a href="{{ url_for('staff.subjects') }}">Create a subject →</a></div>
+  {% else %}
+  <form method="post">
+    {{ csrf() }}
+    <div class="form-row">
+      <div class="field"><label for="subject_id">Subject</label>
+        <select id="subject_id" name="subject_id" data-search-select="Search subjects…" required>
+          <option value="">Select subject</option>
+          {% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if selected == s.id }}>{{ s.name }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label for="name">Lecture name</label><input id="name" name="name" type="text" required placeholder="e.g. Lecture 3 – Scheduling"></div>
+      <div class="field"><label for="lecture_date">Date</label><input id="lecture_date" name="lecture_date" type="date" value="{{ today }}" required></div>
+      <div class="field"><label for="start_time">Start time</label><input id="start_time" name="start_time" type="time"></div>
+    </div>
+    <details style="margin-bottom:1rem"><summary>More options</summary>
+      <div class="form-row" style="margin-top:.75rem">
+        <div class="field"><label for="repeat">Repeat weekly</label><input id="repeat" name="repeat" type="number" min="1" max="30" value="1"><p class="hint">Creates that many lectures, one per week (named “Name 1”, “Name 2”…).</p></div>
+        <div class="field"><label for="min_minutes">Minimum stay (minutes)</label><input id="min_minutes" name="min_minutes" type="number" min="0" max="600" value="0"><p class="hint">0 = a check-in is enough. Otherwise students must also tap out after this long to count.</p></div>
+        <div class="field"><label class="check" style="margin-top:1.6rem"><input type="checkbox" name="track_exit" value="1" checked> Record exit taps</label><p class="hint">A second tap after 2+ minutes records when the student left.</p></div>
+      </div>
+    </details>
+    <button class="btn" type="submit">Create lecture(s)</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>All lectures</h2>
+    <form method="get" class="inline" style="flex:0 1 auto"><label for="f" class="sr-only">Filter by subject</label>
+      <select id="f" name="subject" style="min-width:200px"><option value="">All subjects</option>{% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if selected == s.id }}>{{ s.name }}</option>{% endfor %}</select>
+      <button class="btn secondary" type="submit">Filter</button></form></div>
+  {% if lectures %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Lecture</th><th>Subject</th><th class="right">Present</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for l in lectures %}
+      <tr><td class="nowrap">{{ l.lecture_date|date }}{% if l.start_time %} <span class="muted">{{ l.start_time }}</span>{% endif %}</td><td>{{ l.name }}</td><td>{{ l.subject_name }}</td>
+      <td class="right num">{{ l.present }} / {{ l.enrolled }}</td><td>{{ session_badge(l) }}</td>
+      <td class="right"><a class="btn secondary small" href="{{ url_for('live.session_page', lecture_id=l.id) }}">Open</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No lectures yet.') }}{% endif %}
+</div>
+{% endblock %}

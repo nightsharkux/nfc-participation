@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, empty %}
+{% block title %}Subjects{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Subjects</h1><p>Each subject has its own enrolled students and lectures. Participation is measured per subject.</p></div></div>
+
+<div class="card">
+  <h2>New subject</h2>
+  <form method="post" class="inline">
+    {{ csrf() }}
+    <div style="flex:2 1 260px"><label for="name">Subject name</label><input id="name" name="name" type="text" required placeholder="e.g. Production Management"></div>
+    <div style="flex:1 1 140px"><label for="code">Code (optional)</label><input id="code" name="code" type="text" placeholder="PM"></div>
+    <button class="btn" type="submit" style="align-self:flex-end">Create subject</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your subjects</h2>
+  {% if subjects %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Subject</th>{% if g.user.role == 'admin' %}<th>Lecturer</th>{% endif %}<th class="right">Students</th><th class="right">Lectures</th><th></th></tr></thead>
+    <tbody>{% for s in subjects %}
+      <tr><td><a href="{{ url_for('staff.subject_detail', subject_id=s.id) }}"><strong>{{ s.name }}</strong></a>{% if s.code %} <span class="badge off">{{ s.code }}</span>{% endif %}</td>
+      {% if g.user.role == 'admin' %}<td>{{ s.lecturer_name }}</td>{% endif %}
+      <td class="right num">{{ s.students }}</td><td class="right num">{{ s.lectures }}</td>
+      <td class="right"><a class="btn secondary small" href="{{ url_for('staff.subject_detail', subject_id=s.id) }}">Manage</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No subjects yet — create your first one above.') }}{% endif %}
+</div>
+{% endblock %}

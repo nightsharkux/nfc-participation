@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, session_badge, empty %}
+{% block title %}Sessions{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Sessions</h1><p>Lectures from the last and next two weeks. Open one to start taking taps.</p></div>
+  <a class="btn secondary" href="{{ url_for('staff.lectures') }}">Plan lectures</a></div>
+<div class="card">
+  {% if lectures %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Lecture</th><th>Subject</th><th class="right">Present</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for l in lectures %}
+      <tr {% if l.lecture_date == today %}style="background:var(--accent-soft)"{% endif %}>
+        <td class="nowrap">{{ l.lecture_date|date }}{% if l.lecture_date == today %} <span class="badge">Today</span>{% endif %}{% if l.start_time %} <span class="muted">{{ l.start_time }}</span>{% endif %}</td>
+        <td>{{ l.name }}</td><td>{{ l.subject_name }}</td><td class="right num">{{ l.present }} / {{ l.enrolled }}</td><td>{{ session_badge(l) }}</td>
+        <td class="right"><a class="btn small {{ '' if l.lecture_date == today or session_active(l) else 'secondary' }}" href="{{ url_for('live.session_page', lecture_id=l.id) }}">Open</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No lectures in this window. Plan some under Lectures.') }}{% endif %}
+</div>
+{% endblock %}

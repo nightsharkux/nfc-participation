@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Calendar{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ first.strftime('%B %Y') }}</h1><p>Lecture schedule. Click a lecture to open its session.</p></div>
+  <div class="actions">
+    <a class="btn secondary" href="{{ url_for('staff.calendar_view', month=prev_month) }}" aria-label="Previous month">← Prev</a>
+    <a class="btn secondary" href="{{ url_for('staff.calendar_view') }}">Today</a>
+    <a class="btn secondary" href="{{ url_for('staff.calendar_view', month=next_month) }}" aria-label="Next month">Next →</a>
+  </div>
+</div>
+<div class="cal" role="grid" aria-label="Lecture calendar for {{ first.strftime('%B %Y') }}">
+  {% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<div class="dow" role="columnheader">{{ d }}</div>{% endfor %}
+  {% for week in weeks %}{% for day in week %}
+    <div class="day {{ 'other' if day.month != first.month }} {{ 'today' if day == today }}" role="gridcell">
+      <div class="n">{{ day.day }}</div>
+      {% for l in by_day.get(day.isoformat(), []) %}
+        <a class="ev" href="{{ url_for('live.session_page', lecture_id=l.id) }}" title="{{ l.name }} · {{ l.subject_name }}">{% if l.start_time %}{{ l.start_time }} {% endif %}{{ l.name }}</a>
+      {% endfor %}
+    </div>
+  {% endfor %}{% endfor %}
+</div>
+{% endblock %}

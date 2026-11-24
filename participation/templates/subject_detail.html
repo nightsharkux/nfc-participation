@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, status_badge, meter, session_badge, empty %}
+{% block title %}{{ subject.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p><a href="{{ url_for('staff.subjects') }}">← Subjects</a></p><h1>{{ subject.name }}{% if subject.code %} <span class="badge off">{{ subject.code }}</span>{% endif %}</h1><p>{{ enrolled|length }} enrolled · {{ lectures|length }} lectures · {{ subject.lecturer_name }}</p></div>
+  <div class="actions">
+    <a class="btn secondary" href="{{ url_for('staff.export_subject', subject_id=subject.id) }}">Export CSV</a>
+    <a class="btn" href="{{ url_for('staff.lectures', subject=subject.id) }}">Add lectures</a>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <section class="card">
+    <h2>Enroll students</h2>
+    {% if candidates %}
+    <form method="post" action="{{ url_for('staff.subject_enroll', subject_id=subject.id) }}">
+      {{ csrf() }}
+      <label for="cand-filter" class="sr-only">Filter students</label>
+      <input id="cand-filter" type="search" placeholder="Filter by name or Moodle ID…" data-filter="#cand-list" style="margin-bottom:.5rem">
+      <div id="cand-list" class="roster" style="max-height:260px;margin-bottom:.75rem">
+        {% for s in candidates %}
+        <label class="check" style="padding:.45rem .8rem;border-top:1px solid var(--border);margin:0" data-search="{{ (s.name ~ ' ' ~ (s.moodle_id or ''))|lower }}">
+          <input type="checkbox" name="student_id" value="{{ s.id }}"> <span>{{ s.name }} <span class="muted small">{{ s.moodle_id or '' }}</span></span></label>
+        {% endfor %}
+      </div>
+      <button class="btn" type="submit">Enroll selected</button>
+    </form>
+    {% else %}<p class="muted">Every registered student is already enrolled — or none are registered yet. <a href="{{ url_for('staff.students') }}">Register students</a>.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Import from CSV</h2>
+    <p class="small muted">Columns: <code>name</code>, <code>moodle_id</code>, optional <code>card_uid</code>. Existing Moodle IDs are updated; everyone in the file is enrolled here.</p>
+    <form method="post" action="{{ url_for('staff.subject_import', subject_id=subject.id) }}" enctype="multipart/form-data">
+      {{ csrf() }}
+      <div class="field"><label for="file">CSV file</label><input id="file" name="file" type="file" accept=".csv,text/csv" required></div>
+      <button class="btn" type="submit">Import &amp; enroll</button>
+    </form>
+    <details style="margin-top:1rem"><summary>Rename or delete this subject</summary>
+      <form method="post" action="{{ url_for('staff.subject_rename', subject_id=subject.id) }}" class="inline" style="margin-top:.75rem">
+        {{ csrf() }}
+        <div style="flex:2 1 200px"><label for="rn">Name</label><input id="rn" name="name" type="text" value="{{ subject.name }}" required></div>
+        <div style="flex:1 1 100px"><label for="rc">Code</label><input id="rc" name="code" type="text" value="{{ subject.code or '' }}"></div>
+        <button class="btn secondary" type="submit" style="align-self:flex-end">Save</button>
+      </form>
+      <form method="post" action="{{ url_for('staff.subject_delete', subject_id=subject.id) }}" data-confirm="Delete this subject with ALL its lectures and attendance? This cannot be undone." style="margin-top:.75rem">
+        {{ csrf() }}<button class="btn danger small" type="submit">Delete subject</button></form>
+    </details>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Enrolled students</h2></div>
+  {% if enrolled %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Student</th><th>Moodle ID</th><th>Attended</th><th style="min-width:140px">Participation</th><th>Grade est.</th><th></th></tr></thead>
+    <tbody>{% for s in enrolled %}{% set st = stats.get(s.id) %}
+      <tr><td><a href="{{ url_for('staff.student_detail', student_id=s.id) }}">{{ s.name }}</a></td><td>{{ s.moodle_id or '' }}</td>
+      <td class="num">{{ st.attended if st else 0 }} / {{ st.total if st else 0 }}</td>
+      <td>{% if st %}<div class="stat-line" style="gap:.5rem;flex-wrap:nowrap"><div style="flex:1">{{ meter(st.percentage, st.status) }}</div><span class="num small">{{ st.percentage }}%</span></div>{% endif %}</td>
+      <td class="num">{{ st.grade if st and st.total else '—' }}</td>
+      <td class="right"><form method="post" action="{{ url_for('staff.subject_unenroll', subject_id=subject.id) }}" data-confirm="Remove {{ s.name }} from this subject?">{{ csrf() }}<input type="hidden" name="student_id" value="{{ s.id }}"><button class="btn secondary small" type="submit">Remove</button></form></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No students enrolled yet.') }}{% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Lectures</h2></div>
+  {% if lectures %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Lecture</th><th>Present</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for l in lectures %}
+      <tr><td class="nowrap">{{ l.lecture_date|date }}{% if l.start_time %} <span class="muted">{{ l.start_time }}</span>{% endif %}</td><td>{{ l.name }}</td><td class="num">{{ l.present }} / {{ l.enrolled }}</td><td>{{ session_badge(l) }}</td>
+      <td class="right"><a class="btn secondary small" href="{{ url_for('live.session_page', lecture_id=l.id) }}">Open</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('No lectures yet.') }}{% endif %}
+</section>
+{% endblock %}

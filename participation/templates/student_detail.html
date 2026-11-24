@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf, status_badge, ring, empty %}
+{% block title %}{{ st.name }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><p><a href="{{ url_for('staff.students') }}">← Students</a></p><h1>{{ st.name }}</h1><p>{{ st.moodle_id or 'No Moodle ID' }}</p></div></div>
+
+<div class="grid cols-2">
+  <section class="card">
+    <h2>Profile</h2>
+    <form method="post" action="{{ url_for('staff.student_update', student_id=st.id) }}">
+      {{ csrf() }}
+      <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" value="{{ st.name }}" required></div>
+      <div class="field"><label for="moodle_id">Moodle ID</label><input id="moodle_id" name="moodle_id" type="text" value="{{ st.moodle_id or '' }}"></div>
+      <div class="field"><label for="card_uid">Card UID</label>
+        <div class="inline"><input id="card_uid" name="card_uid" type="text" value="{{ st.card_uid or '' }}" autocapitalize="characters" spellcheck="false">
+          <button class="btn secondary" type="button" data-scan-into="#card_uid">Scan card</button></div>
+        <p class="hint" id="scan-status" role="status" aria-live="polite">Replace this to link a new card (e.g. after a lost card).</p></div>
+      <button class="btn" type="submit">Save changes</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Sign-in &amp; data</h2>
+    <p>Student portal: {% if st.pin_hash %}<span class="badge good">PIN set</span>{% else %}<span class="badge off">Not activated yet</span>{% endif %}</p>
+    <form method="post" action="{{ url_for('staff.student_reset_pin', student_id=st.id) }}" data-confirm="Reset this student's PIN?">{{ csrf() }}<button class="btn secondary" type="submit">Reset PIN</button></form>
+    <p class="hint">After a reset the student signs in once with their card UID and picks a new PIN.</p>
+    {% if g.user.role == 'admin' %}
+      <hr style="border:0;border-top:1px solid var(--border);margin:1rem 0">
+      <form method="post" action="{{ url_for('staff.student_delete', student_id=st.id) }}" data-confirm="Permanently delete {{ st.name }} and all attendance records?">{{ csrf() }}<button class="btn danger" type="submit">Delete student &amp; data</button></form>
+    {% endif %}
+  </section>
+</div>
+
+<h2 style="margin-top:1.5rem">Participation</h2>
+<div class="grid cols-2">
+{% for s in stats %}
+  <section class="card">
+    <div class="stat-line"><div><h3>{{ s.subject }}</h3><p class="muted small">{{ s.attended }} of {{ s.total }} lectures · grade est. {{ s.grade if s.total else '—' }}</p>{{ status_badge(s.status) }}</div>{{ ring(s.percentage, s.status) }}</div>
+    {% if s.missed_lectures %}<details style="margin-top:.75rem"><summary>Missed ({{ s.missed_lectures|length }})</summary><ul class="pill-list missed" style="margin-top:.5rem">{% for l in s.missed_lectures %}<li>{{ l.lecture_date|date }} · {{ l.name }}</li>{% endfor %}</ul></details>{% endif %}
+  </section>
+{% else %}<div class="card">{{ empty('Not enrolled in any of your subjects.') }}</div>{% endfor %}
+</div>
+{% endblock %}

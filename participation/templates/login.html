@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="card">
+    <h1>Sign in</h1>
+    <p class="muted">Lecturers manage sessions. Students see their own participation.</p>
+    {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" autocomplete="on">
+      {{ csrf() }}
+      <fieldset style="border:0;padding:0;margin:0 0 1rem">
+        <legend class="sr-only">Account type</legend>
+        <div class="seg">
+          <label><input type="radio" name="login_type" value="staff" {% if login_type != 'student' %}checked{% endif %}><span>Lecturer / Admin</span></label>
+          <label><input type="radio" name="login_type" value="student" {% if login_type == 'student' %}checked{% endif %}><span>Student</span></label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="username">Username or Moodle ID</label>
+        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password or PIN</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <p class="hint">First time as a student? Use your Moodle ID and your card's UID, then choose a personal PIN.</p>
+      </div>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro status_badge(status) -%}
+  {%- if status == 'good' %}<span class="badge good"><span aria-hidden="true">✓</span> On track</span>
+  {%- elif status == 'ok' %}<span class="badge ok"><span aria-hidden="true">●</span> Fair</span>
+  {%- elif status == 'risk' %}<span class="badge risk"><span aria-hidden="true">▲</span> Low</span>
+  {%- else %}<span class="badge off">No lectures yet</span>{% endif -%}
+{%- endmacro %}
+
+{% macro meter(pct, status='') -%}
+  <div class="meter {{ status if status in ('good','ok','risk') else '' }}" role="img" aria-label="{{ pct }} percent"><i style="--w: {{ [pct, 100]|min }}%"></i></div>
+{%- endmacro %}
+
+{% macro ring(pct, status='') -%}
+  <div class="ring {{ status if status in ('good','ok','risk') else '' }}" style="--p: {{ [pct, 100]|min }}" role="img" aria-label="{{ pct }} percent attended"><span>{{ pct|round|int }}%</span></div>
+{%- endmacro %}
+
+{% macro session_badge(lecture) -%}
+  {% if session_active(lecture) %}<span class="badge live">Live</span>{% elif lecture.opened_at %}<span class="badge off">Held</span>{% else %}<span class="badge off">Scheduled</span>{% endif %}
+{%- endmacro %}
+
+{% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}

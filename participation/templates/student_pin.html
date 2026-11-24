@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import csrf %}
+{% block title %}{{ 'Choose a PIN' if forced else 'Change PIN' }}{% endblock %}
+{% block content %}
+<div class="auth-wrap"><div class="card">
+  <h1>{{ 'Choose your PIN' if forced else 'Change PIN' }}</h1>
+  {% if forced %}<p class="muted">You signed in with your card UID. Pick a personal PIN — from now on you sign in with your Moodle ID and this PIN.</p>{% endif %}
+  {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post">
+    {{ csrf() }}
+    {% if not forced %}<div class="field"><label for="current">Current PIN</label><input id="current" name="current" type="password" autocomplete="current-password" required></div>{% endif %}
+    <div class="field"><label for="new">New PIN</label><input id="new" name="new" type="password" autocomplete="new-password" minlength="6" required><p class="hint">At least 6 characters. Don't reuse your card UID.</p></div>
+    <div class="field"><label for="confirm">Repeat PIN</label><input id="confirm" name="confirm" type="password" autocomplete="new-password" required></div>
+    <button class="btn" type="submit">Save PIN</button>
+  </form>
+</div></div>
+{% endblock %}

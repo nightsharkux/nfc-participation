@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import status_badge, meter, empty %}
+{% block title %}Statistics{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Statistics</h1><p>Participation per student and subject. Only lectures that have taken place count.</p></div>
+  {% if selected %}<a class="btn secondary" href="{{ url_for('staff.export_subject', subject_id=selected) }}">Export this subject (CSV)</a>{% endif %}</div>
+
+<div class="card">
+  <form method="get" class="inline">
+    <div style="flex:1 1 240px"><label for="subject">Subject</label>
+      <select id="subject" name="subject"><option value="">All subjects</option>{% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if selected == s.id }}>{{ s.name }}</option>{% endfor %}</select></div>
+    <label class="check" style="align-self:flex-end;margin-bottom:.6rem"><input type="checkbox" name="risk" value="1" {{ 'checked' if only_risk }}> Only low participation (&lt; 50%)</label>
+    <button class="btn" type="submit" style="align-self:flex-end">Apply</button>
+  </form>
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="card-head"><label for="rfilter" class="sr-only">Search</label><input id="rfilter" type="search" placeholder="Search students…" data-filter="#stat-body" style="max-width:320px"></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Student</th><th>Subject</th><th class="right">Attended</th><th style="min-width:150px">Participation</th><th>Grade est.</th><th>Status</th></tr></thead>
+    <tbody id="stat-body">{% for r in rows %}
+      <tr data-search="{{ (r.name ~ ' ' ~ r.moodle_id ~ ' ' ~ r.subject)|lower }}">
+        <td><a href="{{ url_for('staff.student_detail', student_id=r.student_id) }}">{{ r.name }}</a><div class="small muted">{{ r.moodle_id }}</div></td><td>{{ r.subject }}</td>
+        <td class="right num">{{ r.attended }} / {{ r.total }}</td>
+        <td><div class="stat-line" style="gap:.5rem;flex-wrap:nowrap"><div style="flex:1">{{ meter(r.percentage, r.status) }}</div><span class="num small">{{ r.percentage }}%</span></div></td>
+        <td class="num">{{ r.grade if r.total else '—' }}</td><td>{{ status_badge(r.status) }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  <p class="hint">Grade estimate: ≥90% → 1.0 · ≥80% → 2.0 · ≥65% → 3.0 · ≥50% → 4.0 · otherwise 5.0. It's a guide for incentives, not a final grade.</p>
+  {% else %}{{ empty('No enrolled students match.') }}{% endif %}
+</div>
+{% endblock %}
